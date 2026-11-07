@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>Pravallika Courier Services</h1>
+    <p>Payment Management</p>
+</header>
+
+<nav>
+    <a href="index.html">Home</a>
+    <a href="customers.html">Customers</a>
+    <a href="parcels.html">Parcels</a>
+    <a href="payments.html">Payments</a>
+    <a href="tracking.html">Tracking</a>
+</nav>
+
+<div class="container">
+
+    <h2>Payment Details</h2>
+
+    <form id="paymentForm">
+
+        <input type="hidden" id="payment_id">
+
+        <label>Parcel ID</label>
+        <input type="number" id="parcel_id" placeholder="Enter parcel ID" required>
+
+        <label>Amount</label>
+        <input type="number" id="amount" step="0.01" min="0.01" placeholder="Enter amount" required>
+
+        <label>Payment Method</label>
+        <select id="payment_method" required>
+            <option value="">Select Payment Method</option>
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="Debit Card">Debit Card</option>
+        </select>
+
+        <label>Payment Status</label>
+        <select id="payment_status" required>
+            <option value="">Select Status</option>
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+        </select>
+
+        <button type="submit">Save Payment</button>
+        <button type="reset" onclick="clearForm()">Clear</button>
+
+    </form>
+
+    <h2>Search Payment</h2>
+
+    <input type="text" id="search" placeholder="Search by Payment ID or Parcel ID" onkeyup="searchPayment()">
+
+    <h2>Payment Records</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Payment ID</th>
+                <th>Parcel ID</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Payment Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="paymentTable"></tbody>
+    </table>
+
+</div>
+
+<footer>
+    <p>© 2026 Pravallika Courier Services</p>
+</footer>
+
+<script>
+
+async function loadPayments() {
+    const response = await fetch('/api/payments');
+    const payments = await response.json();
+
+    const table = document.getElementById('paymentTable');
+    table.innerHTML = '';
+
+    payments.forEach(p => {
+        table.innerHTML += `
+            <tr>
+                <td>${p.payment_id}</td>
+                <td>${p.parcel_id}</td>
+                <td>${p.amount}</td>
+                <td>${p.payment_method}</td>
+                <td>${p.payment_status}</td>
+                <td>
+                    <button onclick="editPayment(${p.payment_id},${p.parcel_id},${p.amount},'${encodeURIComponent(p.payment_method)}','${encodeURIComponent(p.payment_status)}')">Edit</button>
+                    <button onclick="deletePayment(${p.payment_id})">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('payment_id').value;
+
+    const payment = {
+        parcel_id: document.getElementById('parcel_id').value,
+        amount: document.getElementById('amount').value,
+        payment_method: document.getElementById('payment_method').value,
+        payment_status: document.getElementById('payment_status').value
+    };
+
+    const response = await fetch(id ? '/api/payments/' + id : '/api/payments', {
+        method: id ? 'PUT' : 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payment)
+    });
+
+    const result = await response.json();
+    alert(result.message);
+
+    clearForm();
+    loadPayments();
+});
+
+function editPayment(id, parcel, amount, method, status) {
+    document.getElementById('payment_id').value = id;
+    document.getElementById('parcel_id').value = parcel;
+    document.getElementById('amount').value = amount;
+    document.getElementById('payment_method').value = decodeURIComponent(method);
+    document.getElementById('payment_status').value = decodeURIComponent(status);
+    window.scrollTo(0,0);
+}
+
+async function deletePayment(id) {
+    if (confirm('Are you sure you want to delete this payment?')) {
+        const response = await fetch('/api/payments/' + id, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        loadPayments();
+    }
+}
+
+function searchPayment() {
+    const value = document.getElementById('search').value.toLowerCase();
+
+    document.querySelectorAll('#paymentTable tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value) ? '' : 'none';
+    });
+}
+
+function clearForm() {
+    document.getElementById('payment_id').value = '';
+}
+
+loadPayments();
+
+</script>
+
+</body>
+</html>

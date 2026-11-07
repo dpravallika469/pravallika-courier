@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parcel Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>Pravallika Courier Services</h1>
+    <p>Parcel Booking and Management</p>
+</header>
+
+<nav>
+    <a href="index.html">Home</a>
+    <a href="customers.html">Customers</a>
+    <a href="parcels.html">Parcels</a>
+    <a href="payments.html">Payments</a>
+    <a href="tracking.html">Tracking</a>
+</nav>
+
+<div class="container">
+
+    <h2>Book New Parcel</h2>
+
+    <form id="parcelForm">
+
+        <input type="hidden" id="parcel_id">
+
+        <label>Customer ID</label>
+        <input type="number" id="customer_id" placeholder="Enter customer ID" required>
+
+        <label>Sender Address</label>
+        <textarea id="sender_address" placeholder="Enter sender address" required></textarea>
+
+        <label>Receiver Name</label>
+        <input type="text" id="receiver_name" placeholder="Enter receiver name" required>
+
+        <label>Receiver Phone</label>
+        <input type="text" id="receiver_phone" placeholder="Enter receiver phone" required>
+
+        <label>Receiver Address</label>
+        <textarea id="receiver_address" placeholder="Enter receiver address" required></textarea>
+
+        <label>Parcel Weight (kg)</label>
+        <input type="number" id="weight" step="0.01" min="0.01" placeholder="Enter weight" required>
+
+        <label>Booking Date</label>
+        <input type="date" id="booking_date" required>
+
+        <label>Parcel Status</label>
+        <select id="status">
+            <option value="Booked">Booked</option>
+            <option value="In Transit">In Transit</option>
+            <option value="Out for Delivery">Out for Delivery</option>
+            <option value="Delivered">Delivered</option>
+        </select>
+
+        <button type="submit">Save Parcel</button>
+        <button type="reset" onclick="clearForm()">Clear</button>
+
+    </form>
+
+    <h2>Search Parcel</h2>
+
+    <input type="text" id="search" placeholder="Search by parcel ID or receiver name" onkeyup="searchParcel()">
+
+    <h2>Parcel Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Parcel ID</th>
+                <th>Customer ID</th>
+                <th>Receiver</th>
+                <th>Phone</th>
+                <th>Weight</th>
+                <th>Booking Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="parcelTable"></tbody>
+    </table>
+
+</div>
+
+<footer>
+    <p>© 2026 Pravallika Courier Services</p>
+</footer>
+
+<script>
+
+async function loadParcels() {
+    const response = await fetch('/api/parcels');
+    const parcels = await response.json();
+
+    const table = document.getElementById('parcelTable');
+    table.innerHTML = '';
+
+    parcels.forEach(p => {
+        table.innerHTML += `
+            <tr>
+                <td>${p.parcel_id}</td>
+                <td>${p.customer_id}</td>
+                <td>${p.receiver_name}</td>
+                <td>${p.receiver_phone}</td>
+                <td>${p.weight}</td>
+                <td>${String(p.booking_date).slice(0,10)}</td>
+                <td>${p.status}</td>
+                <td>
+                    <button onclick="editParcel(${p.parcel_id},${p.customer_id},'${encodeURIComponent(p.sender_address)}','${encodeURIComponent(p.receiver_name)}','${encodeURIComponent(p.receiver_phone)}','${encodeURIComponent(p.receiver_address)}',${p.weight},'${String(p.booking_date).slice(0,10)}','${encodeURIComponent(p.status)}')">Edit</button>
+                    <button onclick="deleteParcel(${p.parcel_id})">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+document.getElementById('parcelForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('parcel_id').value;
+
+    const parcel = {
+        customer_id: document.getElementById('customer_id').value,
+        sender_address: document.getElementById('sender_address').value,
+        receiver_name: document.getElementById('receiver_name').value,
+        receiver_phone: document.getElementById('receiver_phone').value,
+        receiver_address: document.getElementById('receiver_address').value,
+        weight: document.getElementById('weight').value,
+        booking_date: document.getElementById('booking_date').value,
+        status: document.getElementById('status').value
+    };
+
+    const response = await fetch(id ? '/api/parcels/' + id : '/api/parcels', {
+        method: id ? 'PUT' : 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(parcel)
+    });
+
+    const result = await response.json();
+    alert(result.message);
+    clearForm();
+    loadParcels();
+});
+
+function editParcel(id, customer, sender, receiver, phone, address, weight, date, status) {
+    document.getElementById('parcel_id').value = id;
+    document.getElementById('customer_id').value = customer;
+    document.getElementById('sender_address').value = decodeURIComponent(sender);
+    document.getElementById('receiver_name').value = decodeURIComponent(receiver);
+    document.getElementById('receiver_phone').value = decodeURIComponent(phone);
+    document.getElementById('receiver_address').value = decodeURIComponent(address);
+    document.getElementById('weight').value = weight;
+    document.getElementById('booking_date').value = date;
+    document.getElementById('status').value = decodeURIComponent(status);
+    window.scrollTo(0,0);
+}
+
+async function deleteParcel(id) {
+    if (confirm('Delete this parcel?')) {
+        const response = await fetch('/api/parcels/' + id, {method:'DELETE'});
+        const result = await response.json();
+        alert(result.message);
+        loadParcels();
+    }
+}
+
+function searchParcel() {
+    const value = document.getElementById('search').value.toLowerCase();
+
+    document.querySelectorAll('#parcelTable tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value) ? '' : 'none';
+    });
+}
+
+function clearForm() {
+    document.getElementById('parcel_id').value = '';
+}
+
+loadParcels();
+
+</script>
+
+</body>
+</html>

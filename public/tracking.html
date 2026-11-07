@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parcel Tracking Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>Pravallika Courier Services</h1>
+    <p>Parcel Tracking Management</p>
+</header>
+
+<nav>
+    <a href="index.html">Home</a>
+    <a href="customers.html">Customers</a>
+    <a href="parcels.html">Parcels</a>
+    <a href="payments.html">Payments</a>
+    <a href="tracking.html">Tracking</a>
+</nav>
+
+<div class="container">
+
+    <h2>Tracking Details</h2>
+
+    <form id="trackingForm">
+
+        <input type="hidden" id="tracking_id">
+
+        <label>Parcel ID</label>
+        <input type="number" id="parcel_id" placeholder="Enter parcel ID" required>
+
+        <label>Current Location</label>
+        <input type="text" id="current_location" placeholder="Enter current location" required>
+
+        <label>Tracking Status</label>
+        <select id="tracking_status" required>
+            <option value="">Select Status</option>
+            <option value="Booked">Booked</option>
+            <option value="In Transit">In Transit</option>
+            <option value="Out for Delivery">Out for Delivery</option>
+            <option value="Delivered">Delivered</option>
+        </select>
+
+        <label>Updated At</label>
+        <input type="datetime-local" id="updated_at" required>
+
+        <label>Remarks</label>
+        <textarea id="remarks" placeholder="Enter remarks"></textarea>
+
+        <button type="submit">Save Tracking</button>
+        <button type="reset" onclick="clearForm()">Clear</button>
+
+    </form>
+
+    <h2>Search Tracking</h2>
+
+    <input type="text" id="search" placeholder="Search by Tracking ID or Parcel ID" onkeyup="searchTracking()">
+
+    <h2>Tracking Records</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Tracking ID</th>
+                <th>Parcel ID</th>
+                <th>Current Location</th>
+                <th>Tracking Status</th>
+                <th>Updated At</th>
+                <th>Remarks</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="trackingTable"></tbody>
+    </table>
+
+</div>
+
+<footer>
+    <p>© 2026 Pravallika Courier Services</p>
+</footer>
+
+<script>
+
+async function loadTracking() {
+    const response = await fetch('/api/tracking');
+    const records = await response.json();
+
+    const table = document.getElementById('trackingTable');
+    table.innerHTML = '';
+
+    records.forEach(t => {
+        table.innerHTML += `
+            <tr>
+                <td>${t.tracking_id}</td>
+                <td>${t.parcel_id}</td>
+                <td>${t.current_location}</td>
+                <td>${t.tracking_status}</td>
+                <td>${String(t.updated_at).replace('T',' ').slice(0,19)}</td>
+                <td>${t.remarks || ''}</td>
+                <td>
+                    <button onclick="editTracking(${t.tracking_id},${t.parcel_id},'${encodeURIComponent(t.current_location)}','${encodeURIComponent(t.tracking_status)}','${String(t.updated_at).slice(0,16).replace(' ','T')}','${encodeURIComponent(t.remarks || '')}')">Edit</button>
+                    <button onclick="deleteTracking(${t.tracking_id})">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+document.getElementById('trackingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('tracking_id').value;
+
+    const tracking = {
+        parcel_id: document.getElementById('parcel_id').value,
+        current_location: document.getElementById('current_location').value,
+        tracking_status: document.getElementById('tracking_status').value,
+        updated_at: document.getElementById('updated_at').value.replace('T',' '),
+        remarks: document.getElementById('remarks').value
+    };
+
+    const response = await fetch(id ? '/api/tracking/' + id : '/api/tracking', {
+        method: id ? 'PUT' : 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(tracking)
+    });
+
+    const result = await response.json();
+    alert(result.message);
+
+    clearForm();
+    loadTracking();
+});
+
+function editTracking(id, parcel, location, status, date, remarks) {
+    document.getElementById('tracking_id').value = id;
+    document.getElementById('parcel_id').value = parcel;
+    document.getElementById('current_location').value = decodeURIComponent(location);
+    document.getElementById('tracking_status').value = decodeURIComponent(status);
+    document.getElementById('updated_at').value = date;
+    document.getElementById('remarks').value = decodeURIComponent(remarks);
+    window.scrollTo(0,0);
+}
+
+async function deleteTracking(id) {
+    if (confirm('Are you sure you want to delete this tracking record?')) {
+        const response = await fetch('/api/tracking/' + id, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        loadTracking();
+    }
+}
+
+function searchTracking() {
+    const value = document.getElementById('search').value.toLowerCase();
+
+    document.querySelectorAll('#trackingTable tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value) ? '' : 'none';
+    });
+}
+
+function clearForm() {
+    document.getElementById('tracking_id').value = '';
+}
+
+loadTracking();
+
+</script>
+
+</body>
+</html>
